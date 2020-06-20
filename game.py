@@ -1,72 +1,70 @@
+from blackjack_dealer import BlackJackDealer
+from blackjack_player import BlackJackPlayer
 from deck import Deck
-from hand import Hand
+from blackjack_hand import BlackJackHand
+from blackjack_dealer import BlackJackDealer
 from card import Card
+import typing
+
+from io_manager import IOManager
 
 
 class Game:
-    def __init__(self, deck=None, player_bank=0):
+    def __init__(self, deck: Deck = None):
         if deck is None:
-            self.__deck = Deck(shuffled=True, n_decks=8)
-        else:
-            self.__deck = deck
-        self.__player_bank = player_bank
-        self._pot = 0
+            deck = Deck(shuffled=True, n_decks=8)
+        self.__deck = deck
+        self._dealer = BlackJackDealer()
+        self._player = BlackJackPlayer()
+        self._io_manager = IOManager()
 
-    def deal_to(self, hand, n_cards=1):
-        for i in range(n_cards):
-            hand.add(self.__deck.deal())
+    def play_round(self):
+        self._dealer.hand = self.deal_new_hand()
+        self._player.hands = [self.deal_new_hand()]
+        self._get_bet_from_user()
+        for hand in self._player.hands:
+            self.play_hand(hand)
+        self._dealer.play_turn()
+        self._io_manager.show_hand_to_user(self._dealer.hand)
+        for hand in self._player.hands:
+            is_winning = check_for_win(hand, self._dealer.hand)
 
-    def shuffle_deck(self):
-        self.__deck.shuffle()
+    def play_hand(self, hand):
+        choice = 0
+        while choice != 2 and hand.sum < 21:
+            self._io_manager.print_turn_status(self._player, hand, self._dealer)
+            choice = self._io_manager.get_player_choice()
+            if choice == 1:
+                self._dealer.deal_to(hand)
+            if choice == 4:
+                return self.double_down(hand)
+            if choice == 3:
+                self.split_hand(hand)
 
-    def get_player_bank(self):
-        return self.__player_bank
+    def deal_new_hand(self):
+        new_hand = BlackJackHand()
+        self._dealer.deal_to(new_hand, 2)
+        return new_hand
 
-    def add_funds_to_player(self, amount=0):
-        self.__player_bank += amount
+    def _get_bet_from_user(self):
+        bet = self._io_manager.get_player_bet()
+        self._player.bank -= bet
+        self._player.hands[0].bet_size = bet
 
-    def __print_turn_status(self, player_hand, dealer_hand, bet):
-        print('Dealers hand: ', dealer_hand.as_dealer())
-        print('Your hand: ', player_hand)
-        print(f'Bank: {self.__player_bank}\t Pot: {self._pot}\t Bet Size: {bet}')
-        print('1.Hit\n2.Stand')
-        if player_hand.can_split():
-            print('3.Split')
-        if len(player_hand) == 2:
-            print('4.Double Down')
+    def split_hand(self, hand):
+        new_hand = BlackJackHand()
+        hand.transfer_last_card_to(new_hand)
+        self._player.hands.append(new_hand)
+        self._dealer.deal_to(hand)
+        self._dealer.deal_to(new_hand)
 
-    def play_hand(self, player_hand, dealer_hand, bet, player_hands):
-        self.__print_turn_status(player_hand, dealer_hand, bet)
-        choice = input()
-        while choice != '2':
-            if choice in ('1', '4'):
-                self.deal_to(player_hand)
-                if choice == '4':
-                    self.__player_bank -= bet
-                    self._pot += bet
-                    break
-            elif choice == '3':
-                new_hand = Hand()
-                player_hand.transfer_to(new_hand)
-                self.deal_to(player_hand)
-                self.deal_to(new_hand)
-                player_hands.append(new_hand)
-            self.__print_turn_status(player_hand, dealer_hand, bet)
-            choice = input() if player_hand.get_sum() < 21 else '2'
-        print(f'Hand final status: {player_hand}')
-
-    def play(self, bet=50, n_rounds=1):
-        for i in range(n_rounds):
-            self.__player_bank -= bet
-            self._pot += bet
-            dealer_hand = Hand()
-            self.deal_to(dealer_hand, 2)
-            player_hands = [Hand()]
-            self.deal_to(player_hands[0], 2)
-            for hand in player_hands:
-                self.play_hand(hand, dealer_hand, bet, player_hands)
+    def double_down(self, hand):
+        self._player -= hand.bet_size
+        hand.bet_size *= 2
+        self._dealer.deal_to(hand)
+        return
 
 
 game_deck = Deck(shuffled=True, n_decks=8)
 my_game = Game(game_deck, 10000)
-my_game.play()
+my_game.play_round()

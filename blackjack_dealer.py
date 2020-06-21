@@ -16,7 +16,7 @@ class BlackJackDealer:
             hand.add(self._deck.deal())
 
     def play_turn(self):
-        while self.hand.sum > 17:
+        while self.hand.sum < 17:
             self.deal_to(self.hand)
 
     def __repr__(self):

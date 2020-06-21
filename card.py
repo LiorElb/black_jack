@@ -49,4 +49,3 @@ class Card:
         return f'{self.name} of {self._suit.value}s'
 
 
-print(Card(1, Suit.HEART))

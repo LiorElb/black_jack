@@ -10,8 +10,9 @@ class BlackJackHand:
     def __init__(self, cards: typing.List[Card] = None):
         if cards is None:
             cards = []
-        self._cards = cards
+        self._cards = []
         self._sum = 0
+        self.ace_count = 0
         self._add_cards(cards)
 
     def add(self, card: Card):
@@ -20,7 +21,7 @@ class BlackJackHand:
         if card.is_ace() and self._sum >= 11:
             self._sum += 1
         else:
-            self._sum += card.value
+            self._sum += self._get_blackjack_value(card)
         self._cards.append(card)
 
     def _add_cards(self, cards: typing.List[Card]):
@@ -33,6 +34,17 @@ class BlackJackHand:
     def transfer_last_card_to(self, other):
         other.add(self._cards.pop())
 
+    def is_blackjack(self):
+        return len(self) == 2 and self._sum == 21
+
+    @staticmethod
+    def _get_blackjack_value(card: Card):
+        if card.value == 1:
+            return 11
+        if card.letter in ('J', 'Q', 'K'):
+            return 10
+        return card.value
+
     def __repr__(self):
         return str(self._cards)
 
@@ -42,3 +54,7 @@ class BlackJackHand:
     @property
     def sum(self):
         return self._sum
+
+    @property
+    def cards(self):
+        return self._cards
